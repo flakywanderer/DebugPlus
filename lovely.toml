@@ -159,6 +159,36 @@ overwrite = true
 
 [[patches]]
 [patches.pattern]
+target = "functions/misc_functions.lua"
+match_indent = true
+pattern = 'function reset_drawhash()'
+position = "before"
+payload = '''
+local gc_old = 0
+local gc_new = 0
+
+function get_gc_old_new()
+  return gc_old, gc_new
+end'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+match_indent = true
+pattern = "time_budget = time_budget or *"
+position = "after"
+payload = 'gc_old = collectgarbage("count")'
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+match_indent = true
+pattern = "--don't collect gc outside this margin"
+position = "before"
+payload = 'gc_new = collectgarbage("count")'
+
+[[patches]]
+[patches.pattern]
 target = "game.lua"
 match_indent = true
 pattern = 'love.graphics.print("Current FPS: "..fps, 10, 10)'
@@ -195,11 +225,10 @@ do
     else
         love.graphics.print(string.format("Current FPS: %d\nBase event queue: %d", fps, #(G.E_MANAGER.queues and G.E_MANAGER.queues.base or {})), 10, 10)
     end
-    local gcold = collectgarbage("count")
-    collectgarbage("collect")
-    local gcnew = collectgarbage("count")
-    local mem = string.format("%.2f",gcnew/1024)
-    local mem_dt = string.format("%.2f",(gcold-gcnew)/1024)
+    local gc
+    local gcold, gcnew = get_gc_old_new()
+    local mem = string.format("%.2f",gcold/1024)
+    local mem_dt = string.format("%.2f",(gcold - gcnew)/1024)
     love.graphics.print("Memory: "..mem.." MB ("..mem_dt.." MB)", 10, 50)
     _obj_count = 0
     _obj_count_indiv = {}
